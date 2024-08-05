@@ -1,17 +1,17 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Building2, TrendingUp, DollarSign, PieChart, Upload } from "lucide-react";
+import { Building2, TrendingUp, DollarSign, PieChart, Upload, TrendingDown } from "lucide-react";
 import { useDropzone } from 'react-dropzone';
 import Papa from 'papaparse';
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 const initialPropertyData = [
-  { id: 1, address: "123 Main St", value: 250000, rent: 1500 },
-  { id: 2, address: "456 Elm St", value: 300000, rent: 1800 },
-  { id: 3, address: "789 Oak St", value: 280000, rent: 1600 },
+  { id: 1, address: "123 Main St", value: 250000, rent: 1500, appreciation: 3, expenses: 20 },
+  { id: 2, address: "456 Elm St", value: 300000, rent: 1800, appreciation: 2.5, expenses: 18 },
+  { id: 3, address: "789 Oak St", value: 280000, rent: 1600, appreciation: 2.8, expenses: 22 },
 ];
 
 const performanceData = [
@@ -29,6 +29,28 @@ const Index = () => {
   const totalValue = propertyData.reduce((sum, property) => sum + property.value, 0);
   const totalRent = propertyData.reduce((sum, property) => sum + property.rent, 0);
 
+  const calculateForecast = (property, years = 5) => {
+    let totalCash = 0;
+    let currentValue = property.value;
+    for (let i = 0; i < years; i++) {
+      const annualRent = property.rent * 12;
+      const annualExpenses = (annualRent * property.expenses) / 100;
+      const cashFlow = annualRent - annualExpenses;
+      totalCash += cashFlow;
+      currentValue *= (1 + property.appreciation / 100);
+    }
+    return Math.round(totalCash);
+  };
+
+  const propertyDataWithForecast = useMemo(() => {
+    return propertyData.map(property => ({
+      ...property,
+      forecast: calculateForecast(property)
+    }));
+  }, [propertyData]);
+
+  const totalForecast = propertyDataWithForecast.reduce((sum, property) => sum + property.forecast, 0);
+
   const onDrop = useCallback((acceptedFiles) => {
     const file = acceptedFiles[0];
     Papa.parse(file, {
@@ -38,6 +60,8 @@ const Index = () => {
           address: row[0],
           value: parseFloat(row[1]),
           rent: parseFloat(row[2]),
+          appreciation: parseFloat(row[3]) || 2, // Default to 2% if not provided
+          expenses: parseFloat(row[4]) || 20, // Default to 20% if not provided
         }));
         setPropertyData(parsedData);
         toast.success("CSV file uploaded and processed successfully!");
@@ -113,6 +137,15 @@ const Index = () => {
                 <div className="text-2xl font-bold">{((totalRent * 12 / totalValue) * 100).toFixed(2)}%</div>
               </CardContent>
             </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">5-Year Forecast</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${totalForecast.toLocaleString()}</div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
@@ -129,18 +162,26 @@ const Index = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {propertyData.map(property => (
+                {propertyDataWithForecast.map(property => (
                   <Card key={property.id}>
                     <CardContent className="flex justify-between items-center p-4">
                       <div>
                         <h3 className="font-semibold">{property.address}</h3>
                         <p className="text-sm text-muted-foreground">Value: ${property.value.toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground">Appreciation: {property.appreciation}%</p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-center">
                         <p className="font-semibold">Rent: ${property.rent}/month</p>
+                        <p className="text-sm text-muted-foreground">
+                          Expenses: {property.expenses}%
+                        </p>
                         <p className="text-sm text-muted-foreground">
                           ROI: {((property.rent * 12 / property.value) * 100).toFixed(2)}%
                         </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold">5-Year Forecast</p>
+                        <p className="text-lg text-green-600">${property.forecast.toLocaleString()}</p>
                       </div>
                     </CardContent>
                   </Card>
