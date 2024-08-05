@@ -1,14 +1,10 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Building2, TrendingUp, DollarSign, PieChart, Upload, TrendingDown } from "lucide-react";
-import { useDropzone } from 'react-dropzone';
-import Papa from 'papaparse';
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { Building2, TrendingUp, DollarSign, PieChart } from "lucide-react";
 
-const initialPropertyData = [
+const propertyData = [
   { id: 1, address: "123 Main St", value: 250000, rent: 1500, appreciation: 3, expenses: 20 },
   { id: 2, address: "456 Elm St", value: 300000, rent: 1800, appreciation: 2.5, expenses: 18 },
   { id: 3, address: "789 Oak St", value: 280000, rent: 1600, appreciation: 2.8, expenses: 22 },
@@ -24,7 +20,6 @@ const performanceData = [
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("overview");
-  const [propertyData, setPropertyData] = useState(initialPropertyData);
 
   const totalValue = propertyData.reduce((sum, property) => sum + property.value, 0);
   const totalRent = propertyData.reduce((sum, property) => sum + property.rent, 0);
@@ -42,55 +37,16 @@ const Index = () => {
     return Math.round(totalCash);
   };
 
-  const propertyDataWithForecast = useMemo(() => {
-    return propertyData.map(property => ({
-      ...property,
-      forecast: calculateForecast(property)
-    }));
-  }, [propertyData]);
+  const propertyDataWithForecast = propertyData.map(property => ({
+    ...property,
+    forecast: calculateForecast(property)
+  }));
 
   const totalForecast = propertyDataWithForecast.reduce((sum, property) => sum + property.forecast, 0);
-
-  const onDrop = useCallback((acceptedFiles) => {
-    const file = acceptedFiles[0];
-    Papa.parse(file, {
-      complete: (results) => {
-        const parsedData = results.data.slice(1).map((row, index) => ({
-          id: index + 1,
-          address: row[0],
-          value: parseFloat(row[1]),
-          rent: parseFloat(row[2]),
-          appreciation: parseFloat(row[3]) || 2, // Default to 2% if not provided
-          expenses: parseFloat(row[4]) || 20, // Default to 20% if not provided
-        }));
-        setPropertyData(parsedData);
-        toast.success("CSV file uploaded and processed successfully!");
-      },
-      header: true,
-      skipEmptyLines: true,
-    });
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: '.csv' });
 
   return (
     <div className="min-h-screen p-8 bg-gray-100">
       <h1 className="text-4xl font-bold mb-8">Real Estate Investment Dashboard</h1>
-      
-      <div {...getRootProps()} className="mb-8 p-4 border-2 border-dashed border-gray-300 rounded-lg text-center cursor-pointer">
-        <input {...getInputProps()} />
-        {isDragActive ? (
-          <p>Drop the CSV file here ...</p>
-        ) : (
-          <div>
-            <Upload className="mx-auto h-12 w-12 text-gray-400" />
-            <p>Drag 'n' drop a CSV file here, or click to select one</p>
-            <p className="text-sm text-gray-500">
-              (CSV should have columns: address, value, rent)
-            </p>
-          </div>
-        )}
-      </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
@@ -151,14 +107,8 @@ const Index = () => {
 
         <TabsContent value="properties">
           <Card>
-            <CardHeader className="flex justify-between items-center">
+            <CardHeader>
               <CardTitle>Property Listings</CardTitle>
-              <Button
-                onClick={() => setPropertyData(initialPropertyData)}
-                variant="outline"
-              >
-                Reset to Default Data
-              </Button>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
